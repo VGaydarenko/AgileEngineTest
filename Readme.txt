@@ -2,6 +2,7 @@ Program which found Button with id = 'make-everything-ok-button' in one document
 in another document.
 Input arguments: 1) Path for original document, where make-everything-ok-button will found
                  2) Path for document, where program should found similar button
+    Not Required 3) Name of other element
 
 
 Run application:

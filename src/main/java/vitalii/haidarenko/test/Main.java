@@ -17,7 +17,7 @@ import vitalii.haidarenko.test.utility.XmlDocumentHelper;
  */
 public class Main {
 
-    private final static String ELEMENT_ID = "make-everything-ok-button";
+    private final static String DEFAULT_ELEMENT_ID = "make-everything-ok-button";
 
     public static void main(final String[] args) throws Exception {
         if (args.length < 2) {
@@ -35,7 +35,9 @@ public class Main {
             final Document modifyDocument = builder.parse(modifyPath.toFile());
 
             final XmlDocumentHelper parser = new XmlDocumentHelper();
-            final String result = parser.foundSimilarButton(originalDocument, ELEMENT_ID, modifyDocument);
+            final String result = parser.foundSimilarButton(originalDocument,
+                                                            args[2]==null ? DEFAULT_ELEMENT_ID:args[2],
+                                                            modifyDocument);
             System.out.println("Element found by path: " + result);
         } catch (final InvalidPathException invalidPath) {
             System.out.println("Can not load file. Exception: " + invalidPath);
