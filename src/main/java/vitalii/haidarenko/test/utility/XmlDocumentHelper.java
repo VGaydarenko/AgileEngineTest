@@ -3,7 +3,10 @@ package vitalii.haidarenko.test.utility;
 import static java.text.MessageFormat.format;
 import static javax.xml.xpath.XPathConstants.NODE;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.xpath.XPath;
@@ -15,6 +18,7 @@ import org.apache.xerces.dom.DeferredElementImpl;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import vitalii.haidarenko.test.entities.CompareEntity;
 
 /**
  * Class, which help to work with {@link Document}
@@ -26,12 +30,11 @@ public class XmlDocumentHelper {
 
     private final static String FIND_BUTTON_EXPRESSION = ".//*[@id=\u0027\u0027{0}\u0027\u0027]";
     private final static String FIND_ALL_BUTTONS = ".//*[@class=starts-with('btn','')]";
-    private final static String ON_CLICK = "onclick";
     private final static String NODE_VALUE = "node_value";
     private final static String SEPARATOR = ">";
 
     private final XPath xPath = XPathFactory.newInstance().newXPath();
-    private final Map<String, String> buttonAttrMap = new HashMap<>();
+    private final Map<String, String> mainElementAttrMap = new HashMap<>();
     private final StringBuilder builder = new StringBuilder();
 
     /**
@@ -50,7 +53,7 @@ public class XmlDocumentHelper {
             final DeferredElementImpl mainButton =
                     (DeferredElementImpl) xPath.compile(format(FIND_BUTTON_EXPRESSION, elementId))
                                                .evaluate(originalDocument, NODE);
-            fillAttributeMap(mainButton);
+            fillAttributeMap(mainElementAttrMap, mainButton);
             final Node foundNode = foundSimilarNode(modify);
 
             return getNodePath(foundNode);
@@ -70,14 +73,14 @@ public class XmlDocumentHelper {
         return builder.deleteCharAt(0).toString();
     }
 
-    private void fillAttributeMap(final DeferredElementImpl element) {
+    private void fillAttributeMap(final Map<String, String> map, final DeferredElementImpl element) {
         final var attributes = element.getAttributes();
 
         for (int i = 0; i < attributes.getLength(); i++) {
             final Node nodeItem = attributes.item(i);
-            buttonAttrMap.put(((DeferredAttrImpl) nodeItem).getName(), nodeItem.getNodeValue());
+            map.put(((DeferredAttrImpl) nodeItem).getName(), nodeItem.getNodeValue());
         }
-        buttonAttrMap.put(NODE_VALUE, element.getFirstChild().getNodeValue().trim());
+        map.put(NODE_VALUE, element.getFirstChild().getNodeValue().trim());
     }
 
     private Node foundSimilarNode(final Document doc) {
@@ -90,11 +93,10 @@ public class XmlDocumentHelper {
                 final Node node = buttonList.item(i);
                 final var attributes = node.getAttributes();
 
-                buttonAttrMap.forEach((s, s2) -> {
+                mainElementAttrMap.forEach((s, s2) -> {
                     try {
                         final String attrValue = attributes.getNamedItem(s).getNodeValue();
-                        final var onClickAttr = attributes.getNamedItem(ON_CLICK);
-                        if (onClickAttr != null && attrValue.equals(s2)) {
+                        if (attrValue.equals(s2)) {
                             nodeMap.put(((DeferredElementImpl) node).getNodeIndex(), node);
                         }
                     } catch (final Exception ex) {
@@ -104,15 +106,35 @@ public class XmlDocumentHelper {
             }
 
             if (nodeMap.size() > 1) {
-                return nodeMap.values()
-                              .stream()
-                              .filter(node -> {
-                                  final Node child = node.getFirstChild();
-                                  return child != null &&
-                                          child.getNodeValue().trim().equals(buttonAttrMap.get(NODE_VALUE));
-                              })
-                              .findFirst()
-                              .orElse(null);
+                final List<CompareEntity> compare = new ArrayList<>();
+
+                nodeMap.forEach((integer, node) -> {
+                    final Map<String, String> fountAttrMap = new HashMap<>();
+                    final CompareEntity entity = CompareEntity.builder()
+                                                              .node(node)
+                                                              .build();
+
+                    fillAttributeMap(fountAttrMap, (DeferredElementImpl) node);
+                    fountAttrMap.forEach((key, value) -> {
+                        if (mainElementAttrMap.get(key) != null && mainElementAttrMap.get(key).equals(value)) {
+                            entity.addAttribute(key, value);
+                        }
+                    });
+                    compare.add(entity);
+                });
+
+                System.out.println("Original node: " + mainElementAttrMap.toString());
+                System.out.println("Found node with the most similar attributes");
+
+                final CompareEntity compareEntity = compare.stream()
+                                         .peek(entity -> {
+                                             System.out.println("Node:");
+                                             System.out.println(entity.toString());
+                                         })
+                                         .max(Comparator.comparingInt(o -> o.getSameAttrMap().size()))
+                                         .get();
+                System.out.println("The most similar node with origin: " + compareEntity);
+                return compareEntity.getNode();
             } else {
                 return nodeMap.get(0);
             }

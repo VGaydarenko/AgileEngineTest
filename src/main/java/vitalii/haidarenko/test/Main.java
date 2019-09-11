@@ -28,6 +28,13 @@ public class Main {
             final Path originalPath = Path.of(args[0]);
             final Path modifyPath = Path.of(args[1]);
 
+            String value = null;
+            try {
+                value = args[2];
+            } catch (Exception ex) {
+                // ude default element
+            }
+
             final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             final DocumentBuilder builder = factory.newDocumentBuilder();
 
@@ -36,7 +43,9 @@ public class Main {
 
             final XmlDocumentHelper parser = new XmlDocumentHelper();
             final String result = parser.foundSimilarButton(originalDocument,
-                                                            args[2]==null ? DEFAULT_ELEMENT_ID:args[2],
+                                                            value == null
+                                                                    ? DEFAULT_ELEMENT_ID
+                                                                    : value,
                                                             modifyDocument);
             System.out.println("Element found by path: " + result);
         } catch (final InvalidPathException invalidPath) {
